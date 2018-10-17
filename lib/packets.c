@@ -1318,6 +1318,17 @@ packet_set_udp_port(struct dp_packet *packet, ovs_be16 src, ovs_be16 dst)
     }
 }
 
+/* SCCP */
+void 
+packet_set_window(struct dp_packet *packet, ovs_be16 window)
+{
+    struct udp_header *th = dp_packet_l4(packet);
+	if (ntohs(window) < ntohs(th->tcp_winsz)) {
+		th->tcp_csum = recalc_csum16(th->tcp_csum, th->tcp_winsz, window)
+		th->winsz = window;
+	}
+}
+
 /* Sets the SCTP source and destination port ('src' and 'dst' respectively) of
  * the SCTP header contained in 'packet'.  'packet' must be a valid SCTP packet
  * with its l4 offset properly populated. */

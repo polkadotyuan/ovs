@@ -1402,6 +1402,7 @@ void packet_set_ipv6_addr(struct dp_packet *packet, uint8_t proto,
                           bool recalculate_csum);
 void packet_set_tcp_port(struct dp_packet *, ovs_be16 src, ovs_be16 dst);
 void packet_set_udp_port(struct dp_packet *, ovs_be16 src, ovs_be16 dst);
+void packet_set_window(struct dp_packet *, ovs_be16 window);				/* SCCP */
 void packet_set_sctp_port(struct dp_packet *, ovs_be16 src, ovs_be16 dst);
 void packet_set_icmp(struct dp_packet *, uint8_t type, uint8_t code);
 void packet_set_nd(struct dp_packet *, const struct in6_addr *target,

@@ -5578,8 +5578,10 @@ freeze_unroll_actions(const struct ofpact *a, const struct ofpact *end,
         case OFPACT_CT:
         case OFPACT_CT_CLEAR:
         case OFPACT_NAT:
+		case OFPACT_SET_WINDOW:		/* SCCP */
             /* These may not generate PACKET INs. */
             break;
+
 
         case OFPACT_NOTE:
         case OFPACT_CONJUNCTION:
@@ -6089,6 +6091,7 @@ recirc_for_mpls(const struct ofpact *a, struct xlate_ctx *ctx)
     case OFPACT_WRITE_ACTIONS:
     case OFPACT_WRITE_METADATA:
     case OFPACT_GOTO_TABLE:
+	case OFPACT_SET_WINDOW:
     default:
         break;
     }
@@ -6313,6 +6316,14 @@ do_xlate_actions(const struct ofpact *ofpacts, size_t ofpacts_len,
                 flow->tp_dst = htons(ofpact_get_SET_L4_DST_PORT(a)->port);
             }
             break;
+
+		/* SCCP */
+		case OFPACT_SET_WINDOW:
+			if (is_ip_any(flow)) {
+				wc->masks.window = 0xffff;
+				flow->window = ofpact_get_SET_WINDOW(a)->window;
+			}
+			break;
 
         case OFPACT_RESUBMIT:
             /* Freezing complicates resubmit.  Some action in the flow

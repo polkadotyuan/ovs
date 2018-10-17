@@ -94,7 +94,8 @@ struct vl_mff_map;
     OFPACT(PUSH_MPLS,       ofpact_push_mpls,   ofpact, "push_mpls")    \
     OFPACT(POP_MPLS,        ofpact_pop_mpls,    ofpact, "pop_mpls")     \
     OFPACT(DEC_NSH_TTL,     ofpact_null,        ofpact, "dec_nsh_ttl")  \
-                                                                        \
+	/* SCCP */															\
+    OFPACT(SET_WINDOW,      ofpact_set_window,  ofpact, "set_window")   \
     /* Generic encap & decap */                                         \
     OFPACT(ENCAP,           ofpact_encap,       props, "encap")         \
     OFPACT(DECAP,           ofpact_decap,       ofpact, "decap")        \
@@ -455,6 +456,12 @@ struct ofpact_ecn {
 struct ofpact_ip_ttl {
     struct ofpact ofpact;
     uint8_t ttl;
+};
+
+/* SCCP */
+struct ofpact_set_window {
+	struct ofpact ofpact;
+	uint16_t window;
 };
 
 /* OFPACT_SET_L4_SRC_PORT, OFPACT_SET_L4_DST_PORT.

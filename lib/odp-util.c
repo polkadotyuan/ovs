@@ -159,6 +159,7 @@ ovs_key_attr_to_string(enum ovs_key_attr attr, char *namebuf, size_t bufsize)
     case OVS_KEY_ATTR_IPV4: return "ipv4";
     case OVS_KEY_ATTR_IPV6: return "ipv6";
     case OVS_KEY_ATTR_TCP: return "tcp";
+	case OVS_KET_ATTR_SET_WINDOW: return "set_window";		/* SCCP */
     case OVS_KEY_ATTR_TCP_FLAGS: return "tcp_flags";
     case OVS_KEY_ATTR_UDP: return "udp";
     case OVS_KEY_ATTR_SCTP: return "sctp";
@@ -2394,6 +2395,7 @@ const struct attr_len_tbl ovs_flow_key_attr_lens[OVS_KEY_ATTR_MAX + 1] = {
     [OVS_KEY_ATTR_IPV4]      = { .len = sizeof(struct ovs_key_ipv4) },
     [OVS_KEY_ATTR_IPV6]      = { .len = sizeof(struct ovs_key_ipv6) },
     [OVS_KEY_ATTR_TCP]       = { .len = sizeof(struct ovs_key_tcp) },
+	[OVS_KET_ATTR_SET_WINDOW]= { .len = 2 },			/* SCCP */
     [OVS_KEY_ATTR_TCP_FLAGS] = { .len = 2 },
     [OVS_KEY_ATTR_UDP]       = { .len = sizeof(struct ovs_key_udp) },
     [OVS_KEY_ATTR_SCTP]      = { .len = sizeof(struct ovs_key_sctp) },
@@ -3802,6 +3804,15 @@ format_odp_key_attr__(const struct nlattr *a, const struct nlattr *ma,
         ds_chomp(ds, ',');
         break;
     }
+
+	/* SCCP */
+	case OVS_KET_ATTR_SET_WINDOW: {
+		const struct ovs_key_set_window *mask = ma ? nl_attr_get(ma) : NULL;								  
+		ovs_be16 window = nl_attr_get_be16(a);
+		format_be16(ds, "window", window, MASK(mask, window), verbose)						  
+		break;
+	}
+
     case OVS_KEY_ATTR_TCP_FLAGS:
         if (!is_exact) {
             format_flags_masked(ds, NULL, packet_tcp_flag_to_string,
@@ -4391,6 +4402,14 @@ scan_tcp_flags(const char *s, ovs_be16 *key, ovs_be16 *mask)
         return n;
     }
     return 0;
+}
+
+/* SCCP */
+static int
+scan_window(const char *s, ovs_be16 *key, ovs_be16 *mask)
+{
+	OVS_NOT_REACHED();;
+	return 0;
 }
 
 static uint32_t
@@ -5217,6 +5236,9 @@ parse_odp_key_mask_attr(const char *s, const struct simap *port_names,
         SCAN_FIELD("src=", be16, tcp_src);
         SCAN_FIELD("dst=", be16, tcp_dst);
     } SCAN_END(OVS_KEY_ATTR_TCP);
+
+	/* SCCP */
+	SCAN_SINGLE("set_window(", ovs_be16, window, OVS_KET_ATTR_SET_WINDOW);
 
     SCAN_SINGLE("tcp_flags(", ovs_be16, tcp_flags, OVS_KEY_ATTR_TCP_FLAGS);
 
@@ -7374,6 +7396,38 @@ commit_set_port_action(const struct flow *flow, struct flow *base_flow,
     }
 }
 
+/* SCCP */
+static void
+commit_set_window_action(const struct flow *flow, struct flow *base_flow,
+                         struct ofpbuf *odp_actions,
+                         struct flow_wildcards *wc,
+                         bool use_masked)
+{
+	uint16_t key, mask, base;
+
+	/* Check if 'flow' really has an L3 header. */
+	if (!flow->nw_proto) {
+		return;
+	}
+	
+	if (!is_ip_any(base_flow)) {
+	    return;
+	}
+	
+	if (flow->nw_proto != IPPROTO_TCP) {
+		return;
+	}
+	
+	key = flow->rwnd;
+	base = base_flow->rwnd;
+	mask = wc->masks.rwnd;
+	
+	if (commit(OVS_KEY_ATTR_SET_RWND, use_masked, &key, &base, &mask, sizeof key, odp_actions)) {
+		base_flow->rwnd = base;
+	    wc->masks.rwnd = mask;
+	}
+}
+
 static void
 commit_set_priority_action(const struct flow *flow, struct flow *base_flow,
                            struct ofpbuf *odp_actions,
@@ -7538,6 +7592,9 @@ commit_odp_actions(const struct flow *flow, struct flow *base,
     commit_set_nsh_action(flow, base, odp_actions, wc, use_masked);
     slow1 = commit_set_nw_action(flow, base, odp_actions, wc, use_masked);
     commit_set_port_action(flow, base, odp_actions, wc, use_masked);
+
+	commit_set_window_action(flow, base, odp_actions, wc, use_masked);	/* SCCP */
+
     slow2 = commit_set_icmp_action(flow, base, odp_actions, wc);
     if (!mpls_done) {
         commit_mpls_action(flow, base, odp_actions);

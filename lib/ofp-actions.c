@@ -259,6 +259,9 @@ enum ofp_raw_action_type {
     /* NX1.0-1.4(6): struct nx_action_reg_move, ... VLMFF */
     NXAST_RAW_REG_MOVE,
 
+	/* OF1.3+(42): uint16_t. */
+	OFPAT_RAW_SET_WINDOW,
+
 /* ## ------------------------- ## */
 /* ## Nicira extension actions. ## */
 /* ## ------------------------- ## */
@@ -487,6 +490,7 @@ ofpact_next_flattened(const struct ofpact *ofpact)
     case OFPACT_WRITE_METADATA:
     case OFPACT_GOTO_TABLE:
     case OFPACT_NAT:
+	case OFPACT_SET_WINDOW:
     case OFPACT_ENCAP:
     case OFPACT_DECAP:
     case OFPACT_DEC_NSH_TTL:
@@ -2076,6 +2080,17 @@ format_SET_IP_TTL(const struct ofpact_ip_ttl *a,
     ds_put_format(fp->s, "%smod_nw_ttl:%s%d",
                   colors.param, colors.end, a->ttl);
 }
+
+/* SCCP */
+static void
+format_SET_WINDOW(const struct ofpact_ip_ttl *a,
+                  const struct ofpact_format_params *fp)
+{
+    ds_put_format(fp->s, "%sset_window:%s%d",
+                  colors.param, colors.end, a->window);
+}
+
+
 
 /* Set TCP/UDP/SCTP port actions. */
 
@@ -2096,6 +2111,17 @@ decode_OFPAT_RAW_SET_TP_DST(ovs_be16 port,
     ofpact_put_SET_L4_DST_PORT(out)->port = ntohs(port);
     return 0;
 }
+
+/* SCCP */
+static enum ofperr
+decode_OFPAT_SET_WINDOW(ovs_be16 window,
+                        enum ofp_version ofp_version OVS_UNUSED,
+                        struct ofpbuf *out)
+{
+    ofpact_put_SET_WINDOW(out)->window = ntohs(window);
+    return 0;
+}
+
 
 static void
 encode_SET_L4_port(const struct ofpact_l4_port *l4_port,
@@ -2138,6 +2164,15 @@ encode_SET_L4_DST_PORT(const struct ofpact_l4_port *l4_port,
     encode_SET_L4_port(l4_port, ofp_version, OFPAT_RAW_SET_TP_DST, field, out);
 }
 
+/* SCCP */
+static void
+encode_SET_WINDOW(const struct ofpact_set_window *set_window,
+                  enum ofp_version ofp_version OVS_UNUSED,
+                  struct ofpbuf *out)
+{
+	put_OFPAT_SET_WINDOW(out, set_window->window);
+}
+
 static char * OVS_WARN_UNUSED_RESULT
 parse_SET_L4_SRC_PORT(char *arg, const struct ofpact_parse_params *pp)
 {
@@ -2167,6 +2202,25 @@ format_SET_L4_DST_PORT(const struct ofpact_l4_port *a,
     ds_put_format(fp->s, "%smod_tp_dst:%s%d",
                   colors.param, colors.end, a->port);
 }
+
+/* SCCP */
+static char * OVS_WARN_UNUSED_RESULT
+parse_SET_WINDOW(char *arg, struct ofpbuf *ofpacts,
+				 enum ofputil_protocol *usable_protocols OVS_UNUSED)
+{
+	uint16_t window;
+	char *error;
+	
+	error = str_to_u16(arg, "window", &window);
+	if (error) {
+		return error;
+	}
+
+	ofpact_put_SET_WINDOW(ofpacts)->window = window;
+	return NULL;
+}
+
+
 
 /* Action structure for OFPAT_COPY_FIELD. */
 struct ofp15_action_copy_field {
@@ -7018,6 +7072,8 @@ ofpact_is_set_or_move_action(const struct ofpact *a)
     case OFPACT_STACK_POP:
     case OFPACT_STACK_PUSH:
     case OFPACT_STRIP_VLAN:
+	case OFPACT_SET_WINDOW:		/* SCCP */
+		return true;
     case OFPACT_WRITE_ACTIONS:
     case OFPACT_WRITE_METADATA:
     case OFPACT_DEBUG_RECIRC:
@@ -7323,6 +7379,7 @@ ovs_instruction_type_from_ofpact_type(enum ofpact_type type)
     case OFPACT_CT:
     case OFPACT_CT_CLEAR:
     case OFPACT_NAT:
+	case OFPACT_SET_WINDOW:		/* SCCP */
     case OFPACT_ENCAP:
     case OFPACT_DECAP:
     case OFPACT_DEC_NSH_TTL:
@@ -8020,6 +8077,12 @@ ofpact_check__(enum ofputil_protocol *usable_protocols, struct ofpact *a,
         }
         return 0;
 
+	case OFPACT_SET_WINDOW:			/* SCCP */
+		if (!is_ip_any(flow) || (flow->nw_proto != IPPROTO_TCP)) {
+			inconsistent_match(usable_protocols);
+		}
+		return 0;
+
     default:
         OVS_NOT_REACHED();
     }
@@ -8378,6 +8441,7 @@ get_ofpact_map(enum ofp_version version)
         { OFPACT_SET_IP_TTL, 23 },
         { OFPACT_DEC_TTL, 24 },
         { OFPACT_SET_FIELD, 25 },
+		{ OFPACT_SET_WINDOW, 42 },			/* SCCP */
         /* OF1.3+ OFPAT_PUSH_PBB (26) not supported. */
         /* OF1.3+ OFPAT_POP_PBB (27) not supported. */
         { 0, -1 },
@@ -8777,7 +8841,9 @@ ofpacts_parse__(char *str, const struct ofpact_parse_params *pp,
             return xstrdup("apply_actions is the default instruction");
         } else if (ofputil_port_from_string(key, pp->port_map, &port)) {
             ofpact_put_OUTPUT(pp->ofpacts)->port = port;
-        } else {
+        } else if (!strcasecmp(key, "set_window")) {			/* SCCP */
+			error = parse_SET_WINDOW(value, ofpacts, usable_protocols);
+		} else {
             return xasprintf("unknown action %s", key);
         }
         if (error) {

@@ -446,6 +446,13 @@ odp_execute_set_action(struct dp_packet *packet, const struct nlattr *a)
         md->recirc_id = nl_attr_get_u32(a);
         break;
 
+	case OVS_KEY_ATTR_SET_WINDOW:
+		if (OVS_LIKELY(dp_packet_get_tcp_payload(packet))) {
+			const uint16_t window = nl_attr_get_u16(a);
+			packet_set_window(packet, window);
+		}
+		break;
+
     case OVS_KEY_ATTR_UNSPEC:
     case OVS_KEY_ATTR_PACKET_TYPE:
     case OVS_KEY_ATTR_ENCAP:
@@ -549,6 +556,8 @@ odp_execute_masked_set_action(struct dp_packet *packet,
         md->recirc_id = nl_attr_get_u32(a)
             | (md->recirc_id & ~*get_mask(a, uint32_t));
         break;
+
+	case OVS_KET_ATTR_SET_WINDOW:	/* SCCP */
 
     case OVS_KEY_ATTR_TUNNEL:    /* Masked data not supported for tunnel. */
     case OVS_KEY_ATTR_PACKET_TYPE:
