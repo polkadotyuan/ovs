@@ -1053,7 +1053,7 @@ sflow_read_set_action(const struct nlattr *attr,
     case OVS_KEY_ATTR_PACKET_TYPE:
     case OVS_KEY_ATTR_NSH:
     case __OVS_KEY_ATTR_MAX:
-	case OVS_KET_ATTR_SET_WINDOW:		/* SCCP */
+	case OVS_KEY_ATTR_SET_WINDOW:		/* SCCP */
     default:
         break;
     }

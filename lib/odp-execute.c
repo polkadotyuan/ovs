@@ -557,7 +557,7 @@ odp_execute_masked_set_action(struct dp_packet *packet,
             | (md->recirc_id & ~*get_mask(a, uint32_t));
         break;
 
-	case OVS_KET_ATTR_SET_WINDOW:	/* SCCP */
+	case OVS_KEY_ATTR_SET_WINDOW:	/* SCCP */
 
     case OVS_KEY_ATTR_TUNNEL:    /* Masked data not supported for tunnel. */
     case OVS_KEY_ATTR_PACKET_TYPE:

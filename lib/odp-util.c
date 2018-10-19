@@ -159,7 +159,7 @@ ovs_key_attr_to_string(enum ovs_key_attr attr, char *namebuf, size_t bufsize)
     case OVS_KEY_ATTR_IPV4: return "ipv4";
     case OVS_KEY_ATTR_IPV6: return "ipv6";
     case OVS_KEY_ATTR_TCP: return "tcp";
-	case OVS_KET_ATTR_SET_WINDOW: return "set_window";		/* SCCP */
+	case OVS_KEY_ATTR_SET_WINDOW: return "set_window";		/* SCCP */
     case OVS_KEY_ATTR_TCP_FLAGS: return "tcp_flags";
     case OVS_KEY_ATTR_UDP: return "udp";
     case OVS_KEY_ATTR_SCTP: return "sctp";
@@ -2395,7 +2395,7 @@ const struct attr_len_tbl ovs_flow_key_attr_lens[OVS_KEY_ATTR_MAX + 1] = {
     [OVS_KEY_ATTR_IPV4]      = { .len = sizeof(struct ovs_key_ipv4) },
     [OVS_KEY_ATTR_IPV6]      = { .len = sizeof(struct ovs_key_ipv6) },
     [OVS_KEY_ATTR_TCP]       = { .len = sizeof(struct ovs_key_tcp) },
-	[OVS_KET_ATTR_SET_WINDOW]= { .len = 2 },			/* SCCP */
+	[OVS_KEY_ATTR_SET_WINDOW]= { .len = 2 },			/* SCCP */
     [OVS_KEY_ATTR_TCP_FLAGS] = { .len = 2 },
     [OVS_KEY_ATTR_UDP]       = { .len = sizeof(struct ovs_key_udp) },
     [OVS_KEY_ATTR_SCTP]      = { .len = sizeof(struct ovs_key_sctp) },
@@ -2808,6 +2808,7 @@ odp_mask_is_constant__(enum ovs_key_attr attr, const void *mask, size_t size,
     case OVS_KEY_ATTR_IPV4:
     case OVS_KEY_ATTR_TCP:
     case OVS_KEY_ATTR_UDP:
+	case OVS_KET_ATTR_SET_WINDOW:		/* SCCP */
     case OVS_KEY_ATTR_ICMP:
     case OVS_KEY_ATTR_ICMPV6:
     case OVS_KEY_ATTR_ND:
@@ -3806,10 +3807,10 @@ format_odp_key_attr__(const struct nlattr *a, const struct nlattr *ma,
     }
 
 	/* SCCP */
-	case OVS_KET_ATTR_SET_WINDOW: {
+	case OVS_KEY_ATTR_SET_WINDOW: {
 		const struct ovs_key_set_window *mask = ma ? nl_attr_get(ma) : NULL;								  
 		ovs_be16 window = nl_attr_get_be16(a);
-		format_be16(ds, "window", window, MASK(mask, window), verbose)						  
+		format_be16(ds, "window", window, MASK(mask, window), verbose);
 		break;
 	}
 
@@ -5238,7 +5239,7 @@ parse_odp_key_mask_attr(const char *s, const struct simap *port_names,
     } SCAN_END(OVS_KEY_ATTR_TCP);
 
 	/* SCCP */
-	SCAN_SINGLE("set_window(", ovs_be16, window, OVS_KET_ATTR_SET_WINDOW);
+	SCAN_SINGLE("set_window(", ovs_be16, window, OVS_KEY_ATTR_SET_WINDOW);
 
     SCAN_SINGLE("tcp_flags(", ovs_be16, tcp_flags, OVS_KEY_ATTR_TCP_FLAGS);
 
