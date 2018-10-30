@@ -145,7 +145,8 @@ struct flow {
     struct eth_addr arp_sha;    /* ARP/ND source hardware address. */
     struct eth_addr arp_tha;    /* ARP/ND target hardware address. */
     ovs_be16 tcp_flags;         /* TCP flags. With L3 to avoid matching L4. */
-    ovs_be16 pad2;              /* Pad to 64 bits. */
+	//ovs_be16 pad2;              /* Pad to 64 bits. */
+	ovs_be16 window;			/* SCCP */
     struct ovs_key_nsh nsh;     /* Network Service Header keys */
 
     /* L4 (64-bit aligned) */

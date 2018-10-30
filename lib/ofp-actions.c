@@ -229,6 +229,9 @@ enum ofp_raw_action_type {
     /* NX1.0(40), OF1.1+(22): uint32_t. */
     OFPAT_RAW_GROUP,
 
+	/* OF1.3(1): ovsbe_16. */
+	OFPAT_RAW_SET_WINDOW,
+
     /* OF1.1+(23): uint8_t. */
     OFPAT_RAW11_SET_NW_TTL,
 
