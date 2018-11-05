@@ -936,7 +936,7 @@ miniflow_extract(struct dp_packet *packet, struct miniflow *dst)
                 miniflow_push_be32(mf, arp_tha.ea[2], 0);
                 miniflow_push_be32(mf, tcp_flags,
                                    TCP_FLAGS_BE32(tcp->tcp_ctl));
-				miniflow_push_be16(mf, window, tcp->tcp_winsz);		/* SCCP */
+                miniflow_push_be16(mf, window, tcp->tcp_winsz);		/* SCCP */
                 miniflow_push_be16(mf, tp_src, tcp->tcp_src);
                 miniflow_push_be16(mf, tp_dst, tcp->tcp_dst);
                 miniflow_push_be16(mf, ct_tp_src, ct_tp_src);

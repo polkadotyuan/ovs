@@ -229,8 +229,8 @@ enum ofp_raw_action_type {
     /* NX1.0(40), OF1.1+(22): uint32_t. */
     OFPAT_RAW_GROUP,
 
-	/* OF1.3(1): ovsbe_16. */
-	OFPAT_RAW_SET_WINDOW,
+    /* OF1.3(49): ovs_be16. */
+    OFPAT_RAW_SET_WINDOW,
 
     /* OF1.1+(23): uint8_t. */
     OFPAT_RAW11_SET_NW_TTL,
@@ -483,6 +483,7 @@ ofpact_next_flattened(const struct ofpact *ofpact)
     case OFPACT_NOTE:
     case OFPACT_EXIT:
     case OFPACT_SAMPLE:
+    case OFPACT_SET_WINDOW:
     case OFPACT_UNROLL_XLATE:
     case OFPACT_CT_CLEAR:
     case OFPACT_DEBUG_RECIRC:
@@ -2282,7 +2283,6 @@ check_SET_IP_TTL(const struct ofpact_ip_ttl *a OVS_UNUSED,
 }
 
 /* Set TCP/UDP/SCTP port actions. */
-
 static enum ofperr
 decode_OFPAT_RAW_SET_TP_SRC(ovs_be16 port,
                             enum ofp_version ofp_version OVS_UNUSED,
@@ -2402,6 +2402,47 @@ check_SET_L4_DST_PORT(struct ofpact_l4_port *a, struct ofpact_check_params *cp)
 {
     return check_set_l4_port(a, cp);
 }
+
+/* SCCP */
+
+static enum ofperr
+decode_OFPAT_RAW_SET_WINDOW(ovs_be16 window,
+                            enum ofp_version ofp_version OVS_UNUSED,
+                            struct ofpbuf *out)
+{
+    ofpact_put_SET_WINDOW(out)->window = ntohs(window);
+    return 0;
+}
+
+static void
+encode_SET_WINDOW(const struct ofpact_set_window *set_window,
+                  enum ofp_version ofp_version OVS_UNUSED, 
+                  struct ofpbuf *out)
+{
+    put_OFPAT_SET_WINDOW(out, set_window->window);
+}
+
+static char * OVS_WARN_UNUSED_RESULT
+parse_SET_WINDOW(char *arg, const struct ofpact_parse_params *pp)
+{
+    return str_to_u16(arg, "window",
+                      &ofpact_put_SET_WINDOW(pp->ofpacts)->window);
+}
+
+static void
+format_SET_WINDOW(const struct ofpact_set_window *a,
+                  const struct ofpact_format_params *fp)
+{
+    ds_put_format(fp->s, "%sset_window:%s%d", colors.param, colors.end, a->window);
+}
+
+static enum ofperr
+check_SET_WINDOW(const struct ofpact_set_window *a OVS_UNUSED,
+                 struct ofpact_check_params *cp OVS_UNUSED)
+{
+    return 0;
+}
+
 
 /* Action structure for OFPAT_COPY_FIELD. */
 struct ofp15_action_copy_field {
@@ -7661,6 +7702,7 @@ action_set_classify(const struct ofpact *a)
     case OFPACT_SET_TUNNEL:
     case OFPACT_SET_VLAN_PCP:
     case OFPACT_SET_VLAN_VID:
+    case OFPACT_SET_WINDOW:
         return ACTION_SLOT_SET_OR_MOVE;
 
     case OFPACT_BUNDLE:
@@ -7887,6 +7929,7 @@ ovs_instruction_type_from_ofpact_type(enum ofpact_type type)
     case OFPACT_ENCAP:
     case OFPACT_DECAP:
     case OFPACT_DEC_NSH_TTL:
+    case OFPACT_SET_WINDOW:
     default:
         return OVSINST_OFPIT11_APPLY_ACTIONS;
     }
@@ -8757,6 +8800,7 @@ ofpact_outputs_to_port(const struct ofpact *ofpact, ofp_port_t port)
     case OFPACT_ENCAP:
     case OFPACT_DECAP:
     case OFPACT_DEC_NSH_TTL:
+    case OFPACT_SET_WINDOW:
     default:
         return false;
     }

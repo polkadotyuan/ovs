@@ -94,6 +94,7 @@ struct vl_mff_map;
     OFPACT(PUSH_MPLS,       ofpact_push_mpls,   ofpact, "push_mpls")    \
     OFPACT(POP_MPLS,        ofpact_pop_mpls,    ofpact, "pop_mpls")     \
     OFPACT(DEC_NSH_TTL,     ofpact_null,        ofpact, "dec_nsh_ttl")  \
+    OFPACT(SET_WINDOW,      ofpact_set_window,  ofpact, "set_window")   \
                                                                         \
     /* Generic encap & decap */                                         \
     OFPACT(ENCAP,           ofpact_encap,       props, "encap")         \
@@ -1021,6 +1022,11 @@ struct ofpact_decap {
      * next protocol.
      */
     ovs_be32 new_pkt_type;
+};
+
+struct ofpact_set_window { /* SCCP */
+    struct ofpact ofpact;
+    ovs_be16 window;
 };
 
 /* Converting OpenFlow to ofpacts. */
